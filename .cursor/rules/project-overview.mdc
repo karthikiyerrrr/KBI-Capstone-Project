@@ -1,0 +1,35 @@
+---
+description: KBI Capstone — music genre classification project context, structure, and how to run
+alwaysApply: true
+---
+
+# KBI Capstone Project — Music Genre Classification
+
+## Overview
+
+Python ML/AI capstone that classifies music genres using the GTZAN dataset. Current model: SVM (Support Vector Classifier) with StandardScaler + PCA preprocessing, trained on hand-crafted audio features (MFCCs, chroma, spectral features, tempo, etc.) via librosa.
+
+Goal: compare classifiers from simple sklearn models up to deep neural networks (Keras) for this task.
+
+## File Structure
+
+- `./data/` — `features_3_sec.csv`, `features_30_sec.csv`, `test_songs/`, `images_original/`, `genres_original/`
+- `./streamlit/` — `Classifier.py` (main app), `pages/1_Model_Stats.py`
+- `./capstone_project.ipynb` — EDA, feature analysis, model experimentation
+- `./music_genre_classifier.py` — Production `MusicGenreClassifier` (SVM pipeline)
+
+## Current Model
+
+`music_genre_classifier.py`: `StandardScaler → PCA (95% variance) → SVC (RBF, C=15)`. Features: chroma STFT, RMS, spectral centroid/bandwidth/rolloff, ZCR, harmonics, percussive, tempo, 20 MFCCs (mean + var). Trained on `features_3_sec.csv` by default; `use_30_sec=True` for 30s segments.
+
+## Run the App
+
+From project root:
+
+```bash
+streamlit run streamlit/Classifier.py
+```
+
+## Learning Goal
+
+Compare classifiers for 10-class genre prediction (GTZAN: blues, classical, country, disco, hiphop, jazz, metal, pop, reggae, rock): baseline sklearn (KNN, DT, Naive Bayes, Logistic Regression, Random Forest, SVM), ensembles (Gradient Boosting, XGBoost), deep nets (Dense, CNN, RNN/LSTM) via Keras.

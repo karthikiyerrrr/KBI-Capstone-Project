@@ -1,0 +1,63 @@
+---
+description: Instructions for tables and graphics on Streamlit pages (Classifier, Model Stats)
+globs: "streamlit/**/*.py"
+alwaysApply: false
+---
+
+# Streamlit Theme — Tables & Graphics
+
+Use these patterns for tables and graphics on Streamlit pages so they match the app theme and stay consistent.
+
+## Theme colors
+
+- **Primary:** `st.get_option("theme.primaryColor") or "#ff4b4b"`
+- **Background:** `st.get_option("theme.backgroundColor") or "#0e1117"`
+- **Text:** `st.get_option("theme.textColor") or "#fafafa"`
+- Wrap in try/except and fall back to the hex values if options are unavailable.
+
+## Tables
+
+### Header row
+
+- Use the **primary color** for the header row: `background: {primary_hex}; color: white;`
+- Cell style: `padding: 0.4rem 0.75rem; text-align: left; border: 1px solid #333; vertical-align: middle;`
+- If the table aligns with `st.columns([2, 1.5, 2, 1])`, set header column widths to the same ratio (e.g. `width: {100*2/6.5}%` for the first column) and use `table-layout: fixed;` so the header aligns with data rows.
+
+### Table markup
+
+- `border-collapse: collapse; width: 100%; margin: 0.5rem 0;`
+- Body cells: same padding and border as header; no background so they inherit theme.
+- Example helper pattern:
+  - `<thead><tr style="background: {primary_hex}; color: white;">{thead}</tr></thead>`
+  - `<style> table th, table td { padding: 0.4rem 0.75rem; text-align: left; border: 1px solid #333; } </style>`
+
+### Data rows with `st.columns`
+
+- Use `st.columns([2, 1.5, 2, 1])` (or the same ratio as the header) for each data row.
+- Vertical alignment: inject CSS so row content is centered:
+  - `div[data-testid="stHorizontalBlock"] { display: flex; align-items: center; }`
+
+### Buttons in header (e.g. “Classify All”)
+
+- If a button sits in a header column, style it with the primary color via custom CSS.
+- Target the column that contains the header cell (e.g. a class on that cell), then style the button in that column: `background-color: {primary_hex} !important; border-color: {primary_hex}; color: white !important;`
+- Use a selector that only affects that column (e.g. `div[data-testid="column"]:has(.header-classify-cell) button`) so row buttons are not restyled.
+
+## Pillboxes (metric chips)
+
+- Layout: `display: inline-block; padding: 0.4rem 0.85rem; border-radius: 9999px; background: var(--secondary-background-color, #262730); margin: 0.25rem 0.45rem 0.25rem 0; font-size: 1.05rem; font-weight: 600;`
+- Use a flex container: `display: flex; flex-wrap: wrap; align-items: center; margin: 0.5rem 0;`
+- For values: `<code style="font-family: ui-monospace, monospace; font-size: 0.9em;">{value}</code>`
+
+## Confusion matrix (matplotlib)
+
+- **Figure/axes background:** `fig.patch.set_facecolor(bg_hex)` and `ax.set_facecolor(bg_hex)` with `bg_hex` from theme.
+- **Colormap:** Dark theme; zero = slightly lighter than background (e.g. `lighten_hex(bg_hex, 18)`); max = primary. Example: `LinearSegmentedColormap.from_list("confusion", [zero_hex, primary_hex], N=256)`.
+- **Labels and ticks:** Use `text_hex` for axis labels, tick labels, and colorbar tick labels (`cbar.ax.yaxis.set_tick_params(color=text_hex)` and `plt.setp(..., color=text_hex)`).
+- **Cell text:** Use white for values on dark cells (e.g. when `val > cm.max()/2`), otherwise `text_hex`.
+- **Axis:** `xlabel="Predicted"`, `ylabel="True"`; rotate x tick labels 45° with `ha="right", rotation_mode="anchor"`.
+
+## Classification report tables
+
+- Same table pattern as above: header row with `primary_hex` and white text; body rows with padding and `border: 1px solid #333`.
+- First column (e.g. genre names) can be capitalized for display; keep header cell (top-left) using the primary background only (no blended style on that cell).

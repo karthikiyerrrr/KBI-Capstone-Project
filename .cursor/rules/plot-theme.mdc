@@ -1,0 +1,33 @@
+---
+description: Use modern dark theme for all matplotlib plots in this project
+globs: "**/*.py,**/*.ipynb"
+alwaysApply: false
+---
+
+# Plot Theme
+
+Use this **modern dark theme** for all matplotlib plots (notebook and scripts).
+
+- **Style:** `plt.style.use('dark_background')`
+- **Background:** Figure and axes `facecolor='#1a1a1a'`
+- **Lines:** Distinct colors (e.g. `#00d4aa`, `#7b68ee`), `linewidth=2`
+- **Text:** Title `color='#e0e0e0'`, axis labels/ticks `color='#b0b0b0'`
+- **Grid:** `ax.grid(True, alpha=0.3, color='#404040')`
+- **Spines:** `ax.spines[:].set_color('#404040')`
+- **Legend:** `ax.legend(framealpha=0.2)`
+
+Example:
+
+```python
+plt.style.use('dark_background')
+fig, ax = plt.subplots(figsize=(12, 6), facecolor='#1a1a1a')
+ax.set_facecolor('#1a1a1a')
+ax.plot(x, y, color='#00d4aa', linewidth=2)
+ax.set_title('Title', fontsize=14, color='#e0e0e0')
+ax.set_xlabel('X', color='#b0b0b0')
+ax.set_ylabel('Y', color='#b0b0b0')
+ax.tick_params(colors='#b0b0b0')
+ax.legend(framealpha=0.2)
+ax.grid(True, alpha=0.3, color='#404040')
+ax.spines[:].set_color('#404040')
+```

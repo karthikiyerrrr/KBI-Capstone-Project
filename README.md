@@ -27,66 +27,73 @@ Plus a single **Tempo** value — 57 features total.
 
 ## Model
 
-The notebook (`capstone_project.ipynb`) compares SVC and Random Forest classifiers via 5-fold cross-validated grid search on the 3-second feature set:
+The notebook (`capstone_project.ipynb`) explores several approaches on the 3-second feature set:
 
-| Model | Best Params | Test Accuracy |
-|---|---|---|
-| SVC | kernel=rbf, C=10 | **93%** |
-| Random Forest | (various) | lower |
+**Standard models** — 5-fold cross-validated grid search over SVC, Random Forest, K-Nearest Neighbors, and Logistic Regression. SVC (RBF, C=15) comes out best with ~92% validation accuracy.
 
-A second grid search refined the SVC further with PCA dimensionality reduction (retaining 95% of variance) and tested C values of 10, 15, and 25. The final pipeline is:
+**Neural network** — A dense MLP (Keras) is trained on the same features; validation accuracy reaches ~88–91% depending on training.
+
+**Best SVM** — A refined grid search over SVC hyperparameters (C, gamma, class_weight) selects `C=15`, `gamma='scale'`, `class_weight=None`, yielding ~92% test accuracy.
+
+The production pipeline in `music_genre_classifier.py` is:
 
 ```
-StandardScaler → PCA(n_components=0.95) → SVC(kernel='rbf', C=15)
+StandardScaler → SVC(kernel='rbf', C=15)
 ```
 
-This achieves ~91–93% accuracy on a held-out 20% test split (1,998 samples).
+This achieves ~91–92% accuracy on a held-out 20% test split.
 
 ## Project Structure
 
 ```
-capstone_project.ipynb      # EDA, model selection, hyperparameter tuning, feature extraction demo
-music_genre_classifier.py   # MusicGenreClassifier class wrapping the final pipeline
-Classifier.py               # Streamlit web app
+capstone_project.ipynb      # EDA, model comparison (SVC, RF, KNN, LogReg, MLP), hyperparameter tuning, feature extraction
+music_genre_classifier.py   # MusicGenreClassifier class wrapping the final SVC pipeline
+streamlit/
+  Classifier.py             # Streamlit app: upload & classify
+  pages/
+    1_Model_Stats.py        # Model Stats page: confusion matrix, classification report
+  uploads/                  # Files uploaded via the web app
 data/
   features_3_sec.csv        # Pre-extracted 3-second features
   features_30_sec.csv       # Pre-extracted 30-second features
   test_songs/               # Sample audio files for inference testing
-uploads/                    # Directory for files uploaded via the web app
 ```
 
 ## Streamlit App
 
-`Classifier.py` provides a simple web interface. Upload a `.wav`, `.mp3`, or `.ogg` file and the app extracts features using `librosa` and returns the predicted genre.
+The app lives under `streamlit/`. You can upload one or more `.wav`, `.mp3`, or `.ogg` files; for each file you can set a **portion** (0.01–1.0) of the track to use for feature extraction (default 0.25). Use **Classify** per row or **Classify All** to run the pipeline. A **Model Stats** page shows accuracy, precision, recall, F1, confusion matrix, and per-genre classification report.
 
-To run:
+Run from the project root:
 
 ```bash
-streamlit run Classifier.py
+streamlit run streamlit/Classifier.py
 ```
 
 ## MusicGenreClassifier
 
 The `MusicGenreClassifier` class in `music_genre_classifier.py` loads the GTZAN CSV data, trains the pipeline, and exposes:
 
-- `predict(file_path)` – extract features from an audio file and return the predicted genre
-- `accuracy()` – test set accuracy
+- `predict(file_path, portion=0.25)` – extract features from a portion of the audio (by duration), aggregate over 3-second segments, and return the predicted genre
 - `classification_report()` – per-class precision/recall/F1
 - `confusion_matrix()` – confusion matrix
+
+Test-set accuracy and other metrics are available via the Streamlit **Model Stats** page or by calling `classification_report()` / `confusion_matrix()`.
 
 ```python
 from music_genre_classifier import MusicGenreClassifier
 
-clf = MusicGenreClassifier()          # trains on 3-sec features by default
-print(clf.accuracy())                 # ~0.91
-print(clf.predict('my_song.wav'))     # e.g. "Country"
+clf = MusicGenreClassifier()                   # trains on 3-sec features by default
+print(clf.classification_report())              # per-class metrics
+print(clf.predict('my_song.wav'))               # e.g. "Country"
+print(clf.predict('my_song.wav', portion=0.5))  # use first half of track
 ```
 
 ## Dependencies
 
 - Python 3.x
 - `librosa` – audio feature extraction
-- `scikit-learn` – modeling pipeline (SVC, PCA, StandardScaler)
+- `scikit-learn` – modeling pipeline (SVC, StandardScaler)
 - `pandas`, `numpy` – data handling
 - `streamlit` – web app
-- `matplotlib` – visualization (notebook only)
+- `matplotlib` – visualization (notebook and Model Stats page)
+- `keras` – neural network experiments in the notebook only

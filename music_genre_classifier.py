@@ -4,39 +4,30 @@ import matplotlib.pyplot as plt
 import librosa
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.decomposition import PCA
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix
 
-data_3_sec = pd.read_csv('data/features_3_sec.csv')
-data_30_sec = pd.read_csv('data/features_30_sec.csv')
+data = pd.read_csv('data/features_3_sec.csv')
 
 class MusicGenreClassifier:
-    def __init__(self, use_30_sec=False):
+    def __init__(self):
         self.svc_pipe = Pipeline([
             ('scaler', StandardScaler()),
-            ('pca', PCA(n_components=0.95)),
             ('svc', SVC(kernel='rbf', C=15))
         ])
-        self.X_train, self.X_test, self.y_train, self.y_test = self._load_data(use_30_sec)
+        self.X_train, self.X_test, self.y_train, self.y_test = self._load_data()
         self.svc_pipe.fit(self.X_train, self.y_train)
 
-    def _load_data(self, use_30_sec=False):
+    def _load_data(self):
         self.le = LabelEncoder()
-        if use_30_sec:
-            self.data = pd.read_csv('data/features_30_sec.csv')
-        else:
-            self.data = pd.read_csv('data/features_3_sec.csv')
-        
+        self.data = data
         self.X = self.data.drop(columns=['filename', 'length', 'label'])
         self.y = self.le.fit_transform(self.data['label'])
         return train_test_split(self.X, self.y, test_size=0.2, random_state=42)
 
-    def _extract_features(self, file_path):
-        y, sr = librosa.load(file_path, mono=True, duration=30)
-        
+    def _features_from_segment(self, y, sr):
+        """Compute one feature dict from a single audio segment (e.g. 3 seconds)."""
         chroma_stft = librosa.feature.chroma_stft(y=y, sr=sr)
         rms = librosa.feature.rms(y=y)
         spec_cent = librosa.feature.spectral_centroid(y=y, sr=sr)
@@ -66,22 +57,44 @@ class MusicGenreClassifier:
             'perceptr_var': np.var(perceptr),
             'tempo': float(np.atleast_1d(tempo).flat[0]),
         }
-
         for i in range(1, 21):
             features[f'mfcc{i}_mean'] = np.mean(mfccs[i-1])
             features[f'mfcc{i}_var'] = np.var(mfccs[i-1])
-
         return features
 
-    def predict(self, file_path):
-        features = self._extract_features(file_path)
-        features_df = pd.DataFrame([features])
-        prediction = self.svc_pipe.predict(features_df)
-        genre = self.le.inverse_transform(prediction)[0]
-        return str(genre).capitalize()
+    def _extract_features(self, file_path, portion=1.0, segment_duration_sec=3):
+        """Load a portion of the song's duration, split into whole 3s segments (round down), return list of feature dicts."""
+        total_duration = librosa.get_duration(path=file_path)
+        duration_to_use = total_duration * portion
+        num_segments = int(duration_to_use // segment_duration_sec)
+        if num_segments == 0:
+            return []
+        load_duration = num_segments * segment_duration_sec
+        y, sr = librosa.load(file_path, mono=True, duration=load_duration)
+        segment_samples = segment_duration_sec * sr
 
-    def accuracy(self):
-        return self.svc_pipe.score(self.X_test, self.y_test)
+        feature_list = []
+        for i in range(num_segments):
+            start = i * segment_samples
+            end = start + segment_samples
+            if end > len(y):
+                break
+            y_seg = y[start:end]
+            feature_list.append(self._features_from_segment(y_seg, sr))
+        return feature_list
+
+    def predict(self, file_path, portion=0.25):
+        feature_list = self._extract_features(file_path, portion=portion)
+        if not feature_list:
+            return None
+        features_df = pd.DataFrame(feature_list)
+        predictions = self.svc_pipe.predict(features_df)
+        counts = {}
+        for p in predictions:
+            counts[p] = counts.get(p, 0) + 1
+        majority_label = max(counts, key=counts.get)
+        genre = self.le.inverse_transform([majority_label])[0]
+        return str(genre).capitalize()
 
     def classification_report(self):
         y_pred = self.svc_pipe.predict(self.X_test)
