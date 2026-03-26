@@ -2,6 +2,38 @@
 
 A machine learning project that classifies music into genres using the [GTZAN dataset](https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification). Audio files are analyzed via acoustic feature extraction, and a Support Vector Machine predicts one of 10 genres.
 
+## Business Understanding
+
+This is a **supervised multi-class classification** problem that uses 57 numerical audio features (MFCCs, chroma, spectral characteristics, tempo, etc.) extracted via `librosa` from the GTZAN dataset to predict which of 10 musical genres (blues, classical, country, disco, hiphop, jazz, metal, pop, reggae, rock) a given audio clip belongs to. It has practical applications in music streaming recommendation, automatic catalog organization, playlist generation, and content moderation.
+
+## Model Findings — SVM (SVC, RBF Kernel, C=15)
+
+A `GridSearchCV` with 5-fold cross-validation compared four classifiers — SVC (RBF kernel, C=15), Random Forest, K-Nearest Neighbors, and Logistic Regression — all behind a `StandardScaler`. The **SVM (SVC)** was selected as the best model, achieving an overall **validation accuracy of 92.19%** on the held-out test set (999 samples).
+
+### Per-Genre Performance
+
+| Genre | Precision | Recall | F1-Score |
+|---|---|---|---|
+| **metal** (best) | 0.96 | 0.97 | 0.96 |
+| **hiphop** | 0.94 | 0.95 | 0.95 |
+| **pop** | 0.94 | 0.94 | 0.94 |
+| **blues** | 0.91 | 0.97 | 0.94 |
+| **reggae** | 0.95 | 0.92 | 0.93 |
+| **jazz** | 0.93 | 0.93 | 0.93 |
+| **classical** | 0.88 | 0.98 | 0.93 |
+| **disco** | 0.92 | 0.89 | 0.90 |
+| **country** | 0.86 | 0.87 | 0.86 |
+| **rock** (weakest) | 0.94 | **0.79** | 0.86 |
+
+### Key Takeaways
+
+- The model is **strongest** at classifying **metal**, **hiphop**, and **pop** — genres with distinctive audio signatures (e.g., metal's high spectral energy, hiphop's percussive patterns, pop's tonal consistency).
+- The model struggles most with **rock** and **country**. Rock has high precision (0.94) but notably low recall (0.79), meaning the model misses ~21% of actual rock clips, likely confusing them with nearby genres like country, blues, or metal.
+- **Country** shows the lowest precision (0.86), meaning other genres are occasionally mislabeled as country.
+- **Classical** has very high recall (0.98) but somewhat lower precision (0.88), suggesting the model rarely misses a classical clip but occasionally misclassifies something else as classical.
+- The **macro average F1** (0.92) is close to the overall accuracy, indicating the model is well-balanced across all 10 classes.
+- The main area of confusion is the **rock/country/blues cluster** — genres that share similar instrumentation and tempo characteristics in the real world.
+
 ## Dataset
 
 The GTZAN dataset contains ~1,000 samples per genre across 10 genres:
